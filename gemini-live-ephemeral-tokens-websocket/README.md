@@ -93,7 +93,7 @@ class MyTool extends FunctionCallDefinition {
 ## Configuration Options
 
 - **Model**: `gemini-3.1-flash-live-preview` (default)
-- **Voice**: Puck, Charon, Kore, Fenrir, Aoede
+- **Voice**: Puck, Charon, Kore, Fenrir, Aoede, Zephyr, Leda, Orus
 - **Response**: Audio, text, or both
 - **Tools**: Custom functions or Google Search grounding
 
