@@ -59,7 +59,8 @@ Live API:
 ## Examples
 
 *   **[Gen AI SDK Python example](./gemini-live-genai-python-sdk/README.md)**: Recommended for ease of use. Connect to the Gemini Live API using the Gen AI SDK to build a real-time multimodal application with a Python backend.
-*   **[Epheremal tokens and raw WebSocket example](./gemini-live-ephemeral-tokens-websocket/README.md)**: RAW protocol control. Connect to the Gemini Live API using WebSockets to build a real-time multimodal application with a JavaScript frontend and a Python backend.
+*   **[Ephemeral tokens and raw WebSocket example](./gemini-live-ephemeral-tokens-websocket/README.md)**: RAW protocol control. Connect to the Gemini Live API using WebSockets to build a real-time multimodal application with a JavaScript frontend and a Python backend (uses `google-genai` SDK on backend to issue ephemeral tokens).
+*   **[Direct API Key WebSocket example (No GenAI SDK)](./gemini-live-api-key-websocket-no-genai/README.md)**: Zero SDK overhead. Evolved from the Ephemeral Tokens example by moving authentication to the browser UI (entering Gemini API Key directly), removing the `google-genai` Python SDK dependency and serving purely as a static web host.
 *   **[Command-line Python example](./command-line/python/README.md)**: A minimal command-line app that streams microphone audio to the Gemini Live API and plays back the response in real time using Python.
 *   **[Command-line Node.js example](./command-line/node/README.md)**: A minimal command-line app that streams microphone audio to the Gemini Live API and plays back the response in real time using Node.js.
 *   **[Command-line Translation Python example](./command-line/python/README.md#real-time-audio-stream-translation)**: A command-line tool that streams a remote audio URL into the Gemini Live Translate model, plays back the translated audio, and prints transcripts with language codes in real time.
