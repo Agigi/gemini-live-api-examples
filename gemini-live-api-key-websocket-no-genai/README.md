@@ -30,7 +30,7 @@ This project evolved from [`gemini-live-ephemeral-tokens-websocket`](../gemini-l
 
 ```bash
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 

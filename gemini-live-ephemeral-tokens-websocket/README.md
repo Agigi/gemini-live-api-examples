@@ -10,7 +10,7 @@ WebSocket client for Google's Gemini Live API with audio/video streaming support
 
 # 2. Create a virtual environment and sync dependencies
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate
 uv pip install -r requirements.txt
 
 # 3. Set your API Key in a .env file
