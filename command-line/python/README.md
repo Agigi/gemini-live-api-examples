@@ -30,7 +30,7 @@ Set your Gemini API Key first:
 export GEMINI_API_KEY="your-api-key"
 ```
 
-### 1. Official GenAI SDK Version (`main.py`)
+### 1. Voice Chat Assistant (GenAI SDK) (`main.py`)
 
 Uses the official `google-genai` SDK to handle connection and live session management:
 
@@ -38,7 +38,7 @@ Uses the official `google-genai` SDK to handle connection and live session manag
 python main.py
 ```
 
-### 2. Pure WebSocket Version without GenAI SDK (`main-no-genai.py`)
+### 2. Pure WebSocket Voice Chat Assistant (`main-no-genai.py`)
 
 Communicates directly with the Gemini Live API over WebSocket using standard `websockets` + `json` + `base64` without requiring the `google-genai` SDK:
 
@@ -47,6 +47,47 @@ python main-no-genai.py
 ```
 
 You should see **"Connected to Gemini Live API!"** — speak into your microphone and Gemini will respond with audio in real time. Press `Ctrl+C` to quit.
+
+## Typeless AI Voice Dictation (`typeless.py` & `typeless-no-genai.py`)
+
+AI-powered voice dictation and text polishing tools inspired by Typeless. Unlike general AI assistants, these scripts do not engage in conversation or answer questions—they strictly transcribe spoken speech into clean, formatted, and punctuated Traditional Chinese text with filler words removed.
+
+### 1. GenAI SDK Version (`typeless.py`)
+
+```bash
+python typeless.py
+```
+
+### 2. Pure WebSocket Version (`typeless-no-genai.py`)
+
+```bash
+python typeless-no-genai.py
+```
+
+### Command Line Flags & Options
+
+Both `typeless.py` and `typeless-no-genai.py` support the following options:
+
+- `--model`: Specify the Gemini Live model (default: `gemini-3.1-flash-live-preview`).
+- `--no-raw-asr`: Hide the real-time gray ASR preview (`[Listening...]`) and only show the final polished transcription result (`[Typeless Result]`).
+- `--use-function-call`: Enable Function Calling mechanism, forcing Gemini to return the structured transcript via a `submit_transcript(text=...)` function call.
+- `--vocab-file`: Path to custom vocabulary text file (default: `special_vocabulary.txt`). Terms listed in this file (one per line) will be injected into the prompt to ensure accurate spelling of specialized terms and proper nouns.
+
+### Example Usage Commands
+
+```bash
+# Default mode (shows real-time ASR preview and loads special_vocabulary.txt)
+python typeless-no-genai.py
+
+# Hide raw real-time ASR preview and only output final polished text
+python typeless-no-genai.py --no-raw-asr
+
+# Enable Function Calling structured transcript output
+python typeless-no-genai.py --use-function-call
+
+# Use a custom vocabulary file
+python typeless-no-genai.py --vocab-file my_custom_terms.txt
+```
 
 ## Real-time Audio Stream Translation (`translate.py`)
 
