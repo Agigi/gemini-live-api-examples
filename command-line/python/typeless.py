@@ -17,7 +17,7 @@ SEND_SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024
 
 # Live API configuration
-DEFAULT_MODEL = "gemini-3.1-flash-live-preview"
+DEFAULT_MODEL = "gemini-3.8-live"
 
 audio_queue_mic = asyncio.Queue(maxsize=10)
 pya = pyaudio.PyAudio()

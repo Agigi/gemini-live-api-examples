@@ -68,7 +68,7 @@ python typeless-no-genai.py
 
 Both `typeless.py` and `typeless-no-genai.py` support the following options:
 
-- `--model`: Specify the Gemini Live model (default: `gemini-3.1-flash-live-preview`).
+- `--model`: Specify the Gemini Live model (default: `gemini-3.8-live`).
 - `--no-raw-asr`: Hide the real-time gray ASR preview (`[Listening...]`) and only show the final polished transcription result (`[Typeless Result]`).
 - `--use-function-call`: Enable Function Calling mechanism, forcing Gemini to return the structured transcript via a `submit_transcript(text=...)` function call.
 - `--vocab-file`: Path to custom vocabulary text file (default: `special_vocabulary.txt`). Terms listed in this file (one per line) will be injected into the prompt to ensure accurate spelling of specialized terms and proper nouns.

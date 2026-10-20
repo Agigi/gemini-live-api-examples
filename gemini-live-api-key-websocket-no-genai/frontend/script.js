@@ -120,7 +120,7 @@ async function connect() {
       return;
     }
 
-    const model = elements.model.value;
+    const model = elements.model.value.trim() || "gemini-3.8-live";
 
     updateStatus("connectionStatus", "Connecting...");
 

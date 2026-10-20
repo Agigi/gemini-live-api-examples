@@ -120,7 +120,7 @@ async function connect() {
       throw new Error(`Failed to fetch token: ${response.statusText}`);
     }
     const { token } = await response.json();
-    const model = elements.model.value;
+    const model = elements.model.value.trim() || "gemini-3.8-live";
 
     updateStatus("connectionStatus", "Connecting...");
 

@@ -136,9 +136,9 @@ class FunctionCallDefinition {
  * Main Gemini Live API client
  */
 class GeminiLiveAPI {
-  constructor(apiKey, model) {
+  constructor(apiKey, model = "gemini-3.8-live") {
     this.apiKey = apiKey;
-    this.model = model;
+    this.model = model || "gemini-3.8-live";
     this.modelUri = `models/${this.model}`;
 
     this.responseModalities = ["AUDIO"];
@@ -165,8 +165,8 @@ class GeminiLiveAPI {
 
     this.activityHandling = "ACTIVITY_HANDLING_UNSPECIFIED";
 
-    this.serviceUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key=${this.apiKey}`;
-    console.log("Service URL (v1alpha): ", this.serviceUrl);
+    this.serviceUrl = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${this.apiKey}`;
+    console.log("Service URL (v1beta): ", this.serviceUrl);
 
     this.connected = false;
     this.webSocket = null;

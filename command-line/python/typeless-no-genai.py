@@ -23,7 +23,7 @@ CHANNELS = 1
 SEND_SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024
 
-DEFAULT_MODEL = "gemini-3.1-flash-live-preview"
+DEFAULT_MODEL = "gemini-3.8-live"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 audio_queue_mic = asyncio.Queue(maxsize=10)
@@ -202,7 +202,7 @@ async def run(model_name: str, show_raw_asr: bool, use_function_call: bool, voca
     else:
         system_instruction_text += "7. 請直接輸出最終整理好的純文字轉錄內容，不要包含其他說明。\n"
 
-    ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key={GEMINI_API_KEY}"
+    ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={GEMINI_API_KEY}"
     print(f"[Typeless] 連接至 Gemini Live API (Pure WebSocket, {model_name})...")
 
     try:
