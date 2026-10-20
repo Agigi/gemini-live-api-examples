@@ -44,6 +44,16 @@ class GeminiClient {
     this.send(JSON.stringify({ text: text }));
   }
 
+  sendClientContent(text, turnComplete = true) {
+    this.send(
+      JSON.stringify({
+        type: "client_content",
+        text: text,
+        turn_complete: turnComplete,
+      })
+    );
+  }
+
   sendImage(base64Data, mimeType = "image/jpeg") {
     this.send(
       JSON.stringify({

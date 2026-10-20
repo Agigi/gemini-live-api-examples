@@ -29,7 +29,15 @@ class GeminiLive:
         self.tools = tools or []
         self.tool_mapping = tool_mapping or {}
 
-    async def start_session(self, audio_input_queue, video_input_queue, text_input_queue, audio_output_callback, audio_interrupt_callback=None):
+    async def start_session(
+        self,
+        audio_input_queue,
+        video_input_queue,
+        text_input_queue,
+        audio_output_callback,
+        audio_interrupt_callback=None,
+        client_content_queue=None,
+    ):
         config = types.LiveConnectConfig(
             response_modalities=[types.Modality.AUDIO],
             speech_config=types.SpeechConfig(
@@ -88,6 +96,22 @@ class GeminiLive:
                     logger.debug("send_text task cancelled")
                 except Exception as e:
                     logger.error(f"send_text error: {e}\n{traceback.format_exc()}")
+
+            async def send_client_content():
+                if not client_content_queue:
+                    return
+                try:
+                    while True:
+                        payload = await client_content_queue.get()
+                        text = payload.get("text", "")
+                        turn_complete = payload.get("turn_complete", True)
+                        logger.info(f"Sending clientContent to Gemini (turn_complete={turn_complete}): {text}")
+                        turns = [types.Content(role="user", parts=[types.Part.from_text(text=text)])]
+                        await session.send_client_content(turns=turns, turn_complete=turn_complete)
+                except asyncio.CancelledError:
+                    logger.debug("send_client_content task cancelled")
+                except Exception as e:
+                    logger.error(f"send_client_content error: {e}\n{traceback.format_exc()}")
 
             event_queue = asyncio.Queue()
 
@@ -207,6 +231,7 @@ class GeminiLive:
             send_audio_task = asyncio.create_task(send_audio())
             send_video_task = asyncio.create_task(send_video())
             send_text_task = asyncio.create_task(send_text())
+            send_client_content_task = asyncio.create_task(send_client_content())
             receive_task = asyncio.create_task(receive_loop())
 
             try:
@@ -224,6 +249,7 @@ class GeminiLive:
                 send_audio_task.cancel()
                 send_video_task.cancel()
                 send_text_task.cancel()
+                send_client_content_task.cancel()
                 receive_task.cancel()
         except Exception as e:
             logger.error(f"Gemini Live session error: {type(e).__name__}: {e}\n{traceback.format_exc()}")

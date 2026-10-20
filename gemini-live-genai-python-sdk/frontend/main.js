@@ -16,6 +16,9 @@ const videoPreview = document.getElementById("video-preview");
 const videoPlaceholder = document.getElementById("video-placeholder");
 const connectBtn = document.getElementById("connectBtn");
 const chatLog = document.getElementById("chat-log");
+const clientContentInput = document.getElementById("clientContentInput");
+const injectBtn = document.getElementById("injectBtn");
+const turnComplete = document.getElementById("turnComplete");
 
 let currentGeminiMessageDiv = null;
 let currentUserMessageDiv = null;
@@ -227,6 +230,15 @@ textInput.onkeypress = (e) => {
   if (e.key === "Enter") sendText();
 };
 
+if (injectBtn) {
+  injectBtn.onclick = sendClientContent;
+}
+if (clientContentInput) {
+  clientContentInput.onkeypress = (e) => {
+    if (e.key === "Enter") sendClientContent();
+  };
+}
+
 function sendText() {
   const text = textInput.value;
   if (text && geminiClient.isConnected()) {
@@ -234,6 +246,20 @@ function sendText() {
     appendMessage("user", text);
     textInput.value = "";
   }
+}
+
+function sendClientContent() {
+  if (!clientContentInput) return;
+  const text = clientContentInput.value.trim();
+  if (!text || !geminiClient.isConnected()) return;
+
+  const isTurnComplete = turnComplete ? turnComplete.checked : true;
+  geminiClient.sendClientContent(text, isTurnComplete);
+  appendMessage(
+    "user",
+    `[Client Content${isTurnComplete ? "" : " (turnComplete: false)"}] ${text}`
+  );
+  clientContentInput.value = "";
 }
 
 function resetUI() {

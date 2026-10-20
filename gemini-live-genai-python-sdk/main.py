@@ -107,6 +107,7 @@ async def websocket_endpoint(websocket: WebSocket):
     audio_input_queue = asyncio.Queue()
     video_input_queue = asyncio.Queue()
     text_input_queue = asyncio.Queue()
+    client_content_queue = asyncio.Queue()
 
     async def audio_output_callback(data):
         await websocket.send_bytes(data)
@@ -134,11 +135,19 @@ async def websocket_endpoint(websocket: WebSocket):
                     text = message["text"]
                     try:
                         payload = json.loads(text)
-                        if isinstance(payload, dict) and payload.get("type") == "image":
-                            logger.info(f"Received image chunk from client: {len(payload['data'])} base64 chars")
-                            image_data = base64.b64decode(payload["data"])
-                            await video_input_queue.put(image_data)
-                            continue
+                        if isinstance(payload, dict):
+                            if payload.get("type") == "image":
+                                logger.info(f"Received image chunk from client: {len(payload['data'])} base64 chars")
+                                image_data = base64.b64decode(payload["data"])
+                                await video_input_queue.put(image_data)
+                                continue
+                            elif payload.get("type") == "client_content":
+                                logger.info(f"Received client_content payload: {payload.get('text')} (turn_complete={payload.get('turn_complete', True)})")
+                                await client_content_queue.put(payload)
+                                continue
+                            elif "text" in payload and len(payload) == 1:
+                                await text_input_queue.put(payload["text"])
+                                continue
                     except json.JSONDecodeError:
                         pass
 
@@ -157,6 +166,7 @@ async def websocket_endpoint(websocket: WebSocket):
             text_input_queue=text_input_queue,
             audio_output_callback=audio_output_callback,
             audio_interrupt_callback=audio_interrupt_callback,
+            client_content_queue=client_content_queue,
         ):
             if event:
                 # Forward events (transcriptions, etc) to client

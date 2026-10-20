@@ -50,6 +50,9 @@ function initDOM() {
     "chatContainer",
     "chatInput",
     "sendBtn",
+    "clientContentInput",
+    "injectBtn",
+    "turnComplete",
     "debugInfo",
     "setupJsonSection",
     "setupJsonDisplay",
@@ -513,6 +516,21 @@ function sendMessage() {
   }
 }
 
+// Inject client content into model history
+function injectClientContent() {
+  const message = elements.clientContentInput.value.trim();
+  if (!message) return;
+
+  if (state.client) {
+    addMessage("[Injected Client Content]: " + message, "user");
+    const turnComplete = elements.turnComplete.checked;
+    state.client.sendClientContentMessage(message, turnComplete);
+    elements.clientContentInput.value = "";
+  } else {
+    addMessage("[Connect to Gemini first]", "system");
+  }
+}
+
 // Add message to chat
 function addMessage(text, type, append = false) {
   // Get all div children (messages)
@@ -556,11 +574,16 @@ function initEventListeners() {
   elements.startVideoBtn.addEventListener("click", toggleVideo);
   elements.startScreenBtn.addEventListener("click", toggleScreen);
   elements.sendBtn.addEventListener("click", sendMessage);
+  elements.injectBtn.addEventListener("click", injectClientContent);
   elements.volume.addEventListener("input", updateVolume);
   elements.temperature.addEventListener("input", updateTemperature);
 
   elements.chatInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendMessage();
+  });
+
+  elements.clientContentInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") injectClientContent();
   });
 }
 
