@@ -103,10 +103,40 @@ async def receive_from_gemini(ws):
             if t.rstrip()[-1:] in ".!?":
                 print()
 
-        # 4. Handle interruption
+        # 4. Handle tool calls (non-blocking concurrent execution)
+        tool_call = msg.get("toolCall")
+        if tool_call:
+            function_calls = tool_call.get("functionCalls", [])
+            asyncio.create_task(handle_tool_calls(ws, function_calls))
+
+        # 5. Handle interruption
         if server_content.get("interrupted"):
             while not audio_queue_output.empty():
                 audio_queue_output.get_nowait()
+
+
+async def handle_tool_calls(ws, function_calls):
+    """Executes tool calls concurrently and sends toolResponse back to Gemini."""
+    async def execute_call(fc):
+        call_id = fc.get("id", "")
+        name = fc.get("name", "")
+        args = fc.get("args", {})
+        print(f"\n\033[93m🛠️ [Tool Call]: {name}({json.dumps(args, ensure_ascii=False)})\033[0m")
+        # Default non-blocking tool execution
+        response_payload = {
+            "result": "ok",
+            "scheduling": "INTERRUPT"
+        }
+        return {"id": call_id, "name": name, "response": response_payload}
+
+    responses = await asyncio.gather(*(execute_call(fc) for fc in function_calls))
+    tool_resp_msg = {
+        "toolResponse": {
+            "functionResponses": responses
+        }
+    }
+    await ws.send(json.dumps(tool_resp_msg))
+    print("\033[92m🛠️ [Tool Response Sent]\033[0m")
 
 
 async def play_audio():

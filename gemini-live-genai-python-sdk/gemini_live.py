@@ -133,30 +133,58 @@ class GeminiLive:
                                     await event_queue.put({"type": "interrupted"})
 
                             if tool_call:
-                                function_responses = []
-                                for fc in tool_call.function_calls:
+                                async def execute_single_tool(fc):
                                     func_name = fc.name
                                     args = fc.args or {}
+                                    scheduling = None
                                     
                                     if func_name in self.tool_mapping:
                                         try:
-                                            tool_func = self.tool_mapping[func_name]
+                                            tool_entry = self.tool_mapping[func_name]
+                                            if isinstance(tool_entry, dict):
+                                                tool_func = tool_entry.get("handler")
+                                                scheduling = tool_entry.get("scheduling")
+                                            else:
+                                                tool_func = tool_entry
+                                            
                                             if inspect.iscoroutinefunction(tool_func):
                                                 result = await tool_func(**args)
                                             else:
                                                 loop = asyncio.get_running_loop()
                                                 result = await loop.run_in_executor(None, lambda: tool_func(**args))
+
+                                            # Support returned dict overriding scheduling or result format
+                                            if isinstance(result, dict) and "scheduling" in result and "result" in result:
+                                                scheduling = result.get("scheduling", scheduling)
+                                                result = result.get("result")
                                         except Exception as e:
                                             result = f"Error: {e}"
-                                        
-                                        function_responses.append(types.FunctionResponse(
-                                            name=func_name,
-                                            id=fc.id,
-                                            response={"result": result}
-                                        ))
-                                        await event_queue.put({"type": "tool_call", "name": func_name, "args": args, "result": result})
-                                
-                                await session.send_tool_response(function_responses=function_responses)
+                                    else:
+                                        result = f"Error: Tool '{func_name}' not registered"
+
+                                    resp_kwargs = {
+                                        "name": func_name,
+                                        "id": fc.id,
+                                        "response": result if isinstance(result, dict) else {"result": result}
+                                    }
+                                    if scheduling:
+                                        resp_kwargs["scheduling"] = scheduling
+
+                                    resp = types.FunctionResponse(**resp_kwargs)
+                                    await event_queue.put({
+                                        "type": "tool_call",
+                                        "name": func_name,
+                                        "args": args,
+                                        "result": result,
+                                        "scheduling": scheduling
+                                    })
+                                    return resp
+
+                                # Concurrently execute all tool calls
+                                function_responses = await asyncio.gather(
+                                    *(execute_single_tool(fc) for fc in tool_call.function_calls)
+                                )
+                                await session.send_tool_response(function_responses=list(function_responses))
                         
                         # session.receive() iterator ended (e.g. after turn_complete) — re-enter to keep listening
                         logger.debug("Gemini receive iterator completed, re-entering receive loop")

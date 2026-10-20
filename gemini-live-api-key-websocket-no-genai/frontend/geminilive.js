@@ -101,11 +101,12 @@ function parseResponseMessages(data) {
  * Function call definition for tool use
  */
 class FunctionCallDefinition {
-  constructor(name, description, parameters, requiredParameters) {
+  constructor(name, description, parameters, requiredParameters, behavior = null) {
     this.name = name;
     this.description = description;
     this.parameters = parameters;
     this.requiredParameters = requiredParameters;
+    this.behavior = behavior; // "NON_BLOCKING" | null
   }
 
   functionToCall(parameters) {
@@ -118,17 +119,20 @@ class FunctionCallDefinition {
       description: this.description,
       parameters: { required: this.requiredParameters, ...this.parameters },
     };
+    if (this.behavior) {
+      definition.behavior = this.behavior;
+    }
     console.log("created FunctionDefinition: ", definition);
     return definition;
   }
 
-  runFunction(parameters) {
+  async runFunction(parameters) {
     console.log(
       `⚡ Running ${this.name} function with parameters: ${JSON.stringify(
         parameters
       )}`
     );
-    return this.functionToCall(parameters);
+    return await this.functionToCall(parameters);
   }
 }
 
@@ -239,9 +243,9 @@ class GeminiLiveAPI {
     console.log("added function: ", newFunction);
   }
 
-  callFunction(functionName, parameters) {
+  async callFunction(functionName, parameters) {
     const functionToCall = this.functionsMap[functionName];
-    return functionToCall.runFunction(parameters);
+    return await functionToCall.runFunction(parameters);
   }
 
   connect() {

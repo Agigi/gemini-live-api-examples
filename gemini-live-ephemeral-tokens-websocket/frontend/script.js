@@ -24,6 +24,7 @@ function initDOM() {
     "enableGrounding",
     "enableAlertTool",
     "enableCssStyleTool",
+    "enableGetOrderTool",
     "voiceSelect",
     "temperature",
     "temperatureValue",
@@ -102,6 +103,16 @@ function createMessage(text, className = "") {
   return div;
 }
 
+// Format tool call/response payload for display
+function formatToolPayload(payload) {
+  if (payload === undefined || payload === null) return "";
+  let str = typeof payload === "string" ? payload : JSON.stringify(payload);
+  if (str.length > 500) {
+    str = str.substring(0, 500) + "...";
+  }
+  return str;
+}
+
 // Update status display
 function updateStatus(elementId, text) {
   if (elements[elementId]) {
@@ -166,6 +177,13 @@ async function connect() {
         const cssStyleTool = new AddCSSStyleTool();
         state.client.addFunction(cssStyleTool);
         console.log("✅ CSS style tool enabled");
+      }
+
+      // Add get order tool if enabled
+      if (elements.enableGetOrderTool && elements.enableGetOrderTool.checked) {
+        const getOrderTool = new GetOrderTool();
+        state.client.addFunction(getOrderTool);
+        console.log("✅ Get order tool enabled");
       }
     } else {
       console.log(
@@ -280,36 +298,53 @@ function handleMessage(message) {
     case MultimodalLiveResponseType.TOOL_CALL:
       console.log("🛠️ Tool call received: ", message.data);
       const functionCalls = message.data.functionCalls;
-      const functionResponses = [];
-      for (let index = 0; index < functionCalls.length; index++) {
-        const functionCall = functionCalls[index];
-        const functionName = functionCall.name;
-        const functionCallId = functionCall.id;
-        const parameters = functionCall.args;
-        console.log(
-          `Calling function ${functionName} with parameters: ${JSON.stringify(
-            parameters
-          )}`
-        );
-        let result;
-        try {
-          result = state.client.callFunction(functionName, parameters);
-          functionResponses.push({
-            id: functionCallId,
-            name: functionName,
-            response: { result: result ?? "ok" },
-          });
-        } catch (err) {
-          console.error(`Error calling function ${functionName}:`, err);
-          functionResponses.push({
-            id: functionCallId,
-            name: functionName,
-            response: { error: err.message },
-          });
-        }
-      }
-      // Send all function responses back to the API
-      state.client.sendToolResponse(functionResponses);
+
+      // Fan out all function calls concurrently (non-blocking — async tools
+      // like get_order run in parallel and don't stall each other or the UI)
+      Promise.all(
+        functionCalls.map(async (functionCall) => {
+          const { name: functionName, id: functionCallId, args: parameters } = functionCall;
+          console.log(
+            `Calling function ${functionName} with parameters: ${JSON.stringify(parameters)}`
+          );
+
+          // Visualize tool call in chat
+          addMessage(`${functionName}(${formatToolPayload(parameters)})`, "tool-call");
+
+          // Check if this tool is declared as NON_BLOCKING
+          const toolDef = state.client.functionsMap[functionName];
+          const isNonBlocking = toolDef && toolDef.behavior === "NON_BLOCKING";
+
+          try {
+            const result = await state.client.callFunction(functionName, parameters);
+            const response = { result: result ?? "ok" };
+
+            // Visualize tool response in chat
+            addMessage(`${functionName} ➔ ${formatToolPayload(result ?? "ok")}`, "tool-response");
+
+            // NON_BLOCKING tools require a scheduling hint so the model knows
+            // how to handle the async result: INTERRUPT | WHEN_IDLE | SILENT
+            if (isNonBlocking) {
+              response.scheduling = toolDef.scheduling || "INTERRUPT";
+            }
+            return { id: functionCallId, name: functionName, response };
+          } catch (err) {
+            console.error(`Error calling function ${functionName}:`, err);
+            const response = { error: err.message };
+
+            // Visualize tool error response in chat
+            addMessage(`${functionName} ➔ Error: ${err.message}`, "tool-response");
+
+            if (isNonBlocking) {
+              response.scheduling = toolDef.scheduling || "INTERRUPT";
+            }
+            return { id: functionCallId, name: functionName, response };
+          }
+        })
+      ).then((functionResponses) => {
+        // Send all responses back once every call has settled
+        state.client.sendToolResponse(functionResponses);
+      });
       break;
 
     case MultimodalLiveResponseType.TURN_COMPLETE:

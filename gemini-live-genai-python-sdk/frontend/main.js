@@ -81,6 +81,14 @@ function handleJsonMessage(msg) {
     } else {
       currentGeminiMessageDiv = appendMessage("gemini", msg.text);
     }
+  } else if (msg.type === "tool_call") {
+    const formattedArgs = JSON.stringify(msg.args || {});
+    const formattedResult = typeof msg.result === "object" ? JSON.stringify(msg.result, null, 2) : String(msg.result);
+    const schedulingBadge = msg.scheduling ? ` [${msg.scheduling}]` : "";
+    appendMessage(
+      "tool",
+      `🔧 ${msg.name}(${formattedArgs})${schedulingBadge}\n↳ ${formattedResult}`
+    );
   }
 }
 

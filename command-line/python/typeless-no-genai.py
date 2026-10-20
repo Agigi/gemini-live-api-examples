@@ -140,7 +140,10 @@ async def receive_from_gemini(ws, show_raw_asr: bool = True):
                     function_responses.append({
                         "id": call_id,
                         "name": "submit_transcript",
-                        "response": {"result": "received"}
+                        "response": {
+                            "result": "received",
+                            "scheduling": "SILENT"
+                        }
                     })
 
             if function_responses:
@@ -186,6 +189,7 @@ async def run(model_name: str, show_raw_asr: bool, use_function_call: bool, voca
                 {
                     "name": "submit_transcript",
                     "description": "將整理好的最終轉錄文字傳回",
+                    "behavior": "NON_BLOCKING",
                     "parameters": {
                         "type": "OBJECT",
                         "properties": {

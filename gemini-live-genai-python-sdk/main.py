@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from gemini_live import GeminiLive
+from google.genai import types
 from twilio_handler import TwilioHandler
 
 # Load environment variables
@@ -50,6 +51,52 @@ async def root():
     return FileResponse("frontend/index.html")
 
 
+# Demo Tool: get_order (simulates non-blocking async backend lookup with INTERRUPT scheduling hint)
+async def get_order_handler(order_id: str):
+    logger.info(f"📦 [Tool] get_order called for '{order_id}' — simulating 5s async backend fetch...")
+    await asyncio.sleep(5)
+    result = {
+        "order_id": order_id,
+        "status": "SHIPPED",
+        "estimated_delivery": "Tomorrow by 5 PM",
+        "carrier": "FedEx",
+        "tracking_number": "1Z999AA10123456784",
+        "items": ["Gemini Live Dev Kit", "USB-C Audio Adapter"],
+    }
+    logger.info(f"✅ [Tool] get_order resolved for '{order_id}': {result}")
+    return result
+
+
+SERVER_TOOLS = [
+    types.Tool(
+        function_declarations=[
+            types.FunctionDeclaration(
+                name="get_order",
+                description="Lookup status and tracking details for a customer order by its ID.",
+                behavior="NON_BLOCKING",
+                parameters=types.Schema(
+                    type="OBJECT",
+                    properties={
+                        "order_id": types.Schema(
+                            type="STRING",
+                            description="The order ID to query (e.g., ORD-12345)",
+                        )
+                    },
+                    required=["order_id"],
+                ),
+            )
+        ]
+    )
+]
+
+SERVER_TOOL_MAPPING = {
+    "get_order": {
+        "handler": get_order_handler,
+        "scheduling": "INTERRUPT",
+    }
+}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for Gemini Live."""
@@ -69,7 +116,11 @@ async def websocket_endpoint(websocket: WebSocket):
         pass
 
     gemini_client = GeminiLive(
-        api_key=GEMINI_API_KEY, model=MODEL, input_sample_rate=16000
+        api_key=GEMINI_API_KEY,
+        model=MODEL,
+        input_sample_rate=16000,
+        tools=SERVER_TOOLS,
+        tool_mapping=SERVER_TOOL_MAPPING,
     )
 
     async def receive_from_client():

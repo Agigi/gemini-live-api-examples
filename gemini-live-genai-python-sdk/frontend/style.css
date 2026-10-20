@@ -250,6 +250,18 @@ video {
   border-bottom-left-radius: 0.25rem;
 }
 
+.message.tool {
+  align-self: center;
+  background-color: #f1f3f4;
+  color: #3c4043;
+  border-left: 3px solid #1a73e8;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.82rem;
+  max-width: 90%;
+  white-space: pre-wrap;
+}
+
 input[type="text"] {
   flex: 1;
   padding: 0.75rem;

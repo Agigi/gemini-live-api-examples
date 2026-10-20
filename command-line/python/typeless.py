@@ -23,10 +23,26 @@ audio_queue_mic = asyncio.Queue(maxsize=10)
 pya = pyaudio.PyAudio()
 audio_stream = None
 
-# Custom tool definition for Function Calling (optional extra mechanism)
-def submit_transcript(text: str) -> dict:
-    """Submit the cleaned, formatted transcript of what the user spoke."""
-    return {"status": "success", "received_length": len(text)}
+# Custom tool definition for Function Calling with NON_BLOCKING behavior
+SUBMIT_TRANSCRIPT_TOOL = types.Tool(
+    function_declarations=[
+        types.FunctionDeclaration(
+            name="submit_transcript",
+            description="Submit the cleaned, formatted transcript of what the user spoke.",
+            behavior="NON_BLOCKING",
+            parameters=types.Schema(
+                type="OBJECT",
+                properties={
+                    "text": types.Schema(
+                        type="STRING",
+                        description="The cleaned, formatted transcript text",
+                    )
+                },
+                required=["text"],
+            ),
+        )
+    ]
+)
 
 async def listen_audio():
     """Listens for audio from microphone and puts raw PCM bytes into queue."""
@@ -115,7 +131,8 @@ async def receive_responses(session, show_raw_asr: bool = True):
                             types.FunctionResponse(
                                 name=fc.name,
                                 id=fc.id,
-                                response={"result": "received"}
+                                response={"result": "received"},
+                                scheduling="SILENT",
                             )
                         )
                 if function_responses:
@@ -159,7 +176,7 @@ async def run(model_name: str, show_raw_asr: bool, use_function_call: bool, voca
     tools = []
     if use_function_call:
         system_instruction += "7. 必須呼叫 `submit_transcript(text=...)` 工具，將最後整理好的文字傳回。\n"
-        tools.append(submit_transcript)
+        tools.append(SUBMIT_TRANSCRIPT_TOOL)
     else:
         system_instruction += "7. 請直接輸出最終整理好的純文字轉錄內容，不要包含其他說明。\n"
 
