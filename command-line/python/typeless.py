@@ -119,6 +119,19 @@ async def receive_responses(session, show_raw_asr: bool = True):
                         print("\033[0m")
                         current_state = None
 
+                if hasattr(server_content, "interaction_status") and server_content.interaction_status:
+                    status_str = server_content.interaction_status.name if hasattr(server_content.interaction_status, "name") else str(server_content.interaction_status)
+                    if status_str == "IN_PROGRESS":
+                        if current_state is not None:
+                            print("\033[0m")
+                            current_state = None
+                        print("\n\033[90m⚡ [Thinking... IN_PROGRESS]\033[0m", flush=True)
+                    elif status_str == "REQUIRES_ACTION":
+                        if current_state is not None:
+                            print("\033[0m")
+                            current_state = None
+                        print("\n\033[92m✅ [Ready REQUIRES_ACTION]\033[0m", flush=True)
+
             # 3. Function Call Mechanism (If Gemini invokes submit_transcript tool)
             if tool_call:
                 function_responses = []

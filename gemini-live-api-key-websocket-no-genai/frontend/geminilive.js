@@ -14,6 +14,7 @@ const MultimodalLiveResponseType = {
   ERROR: "ERROR",
   INPUT_TRANSCRIPTION: "INPUT_TRANSCRIPTION",
   OUTPUT_TRANSCRIPTION: "OUTPUT_TRANSCRIPTION",
+  INTERACTION_STATUS: "INTERACTION_STATUS",
 };
 
 /**
@@ -75,6 +76,22 @@ function parseResponseMessages(data) {
           text: serverContent.outputTranscription.text || "",
           finished: serverContent.outputTranscription.finished || false,
         },
+        endOfTurn: false,
+      });
+    }
+
+    // Interaction status
+    const interactionStatus =
+      serverContent?.interactionStatus ||
+      serverContent?.interaction_status ||
+      data?.interactionStatus ||
+      data?.interaction_status;
+
+    if (interactionStatus) {
+      console.log("🔄 INTERACTION STATUS response", interactionStatus);
+      responses.push({
+        type: MultimodalLiveResponseType.INTERACTION_STATUS,
+        data: interactionStatus,
         endOfTurn: false,
       });
     }

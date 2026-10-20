@@ -109,7 +109,20 @@ async def receive_from_gemini(ws):
             function_calls = tool_call.get("functionCalls", [])
             asyncio.create_task(handle_tool_calls(ws, function_calls))
 
-        # 5. Handle interruption
+        # 5. Handle interaction status (Background reasoning tracking)
+        interaction_status = (
+            server_content.get("interactionStatus")
+            or server_content.get("interaction_status")
+            or msg.get("interactionStatus")
+            or msg.get("interaction_status")
+        )
+        if interaction_status:
+            if interaction_status == "IN_PROGRESS":
+                print("\n\033[93m⚡ [Model Reasoning: IN_PROGRESS]\033[0m", flush=True)
+            elif interaction_status == "REQUIRES_ACTION":
+                print("\n\033[92m✅ [Model Status: REQUIRES_ACTION (Ready)]\033[0m", flush=True)
+
+        # 6. Handle interruption
         if server_content.get("interrupted"):
             while not audio_queue_output.empty():
                 audio_queue_output.get_nowait()

@@ -127,6 +127,25 @@ async def receive_from_gemini(ws, show_raw_asr: bool = True):
                     print("\033[0m")
                     current_state = None
 
+            # Check interaction status (Background reasoning tracking)
+            interaction_status = (
+                server_content.get("interactionStatus")
+                or server_content.get("interaction_status")
+                or msg.get("interactionStatus")
+                or msg.get("interaction_status")
+            )
+            if interaction_status:
+                if interaction_status == "IN_PROGRESS":
+                    if current_state is not None:
+                        print("\033[0m")
+                        current_state = None
+                    print("\n\033[90m⚡ [Thinking... IN_PROGRESS]\033[0m", flush=True)
+                elif interaction_status == "REQUIRES_ACTION":
+                    if current_state is not None:
+                        print("\033[0m")
+                        current_state = None
+                    print("\n\033[92m✅ [Ready REQUIRES_ACTION]\033[0m", flush=True)
+
         # 3. Function Call Mechanism (If Gemini invokes submit_transcript tool)
         if tool_call:
             function_responses = []

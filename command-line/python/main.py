@@ -80,6 +80,13 @@ async def receive_audio(session):
                 if t.rstrip()[-1:] in '.!?':
                     print()
 
+            if hasattr(sc, "interaction_status") and sc.interaction_status:
+                status_str = sc.interaction_status.name if hasattr(sc.interaction_status, "name") else str(sc.interaction_status)
+                if status_str == "IN_PROGRESS":
+                    print("\n\033[93m⚡ [Model Reasoning: IN_PROGRESS]\033[0m", flush=True)
+                elif status_str == "REQUIRES_ACTION":
+                    print("\n\033[92m✅ [Model Status: REQUIRES_ACTION (Ready)]\033[0m", flush=True)
+
         # Empty the queue on interruption to stop playback
         while not audio_queue_output.empty():
             audio_queue_output.get_nowait()
