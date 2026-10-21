@@ -44,6 +44,8 @@ robust voice and video agents:
     Lets you control when the model responds and in what contexts.
 *   [**Affective dialog**](https://ai.google.dev/gemini-api/docs/live-guide#affective-dialog):
     Adapts response style and tone to match the user's input expression.
+*   [**Extended thinking & reasoning status**](https://ai.google.dev/gemini-api/docs/live-guide#thinking):
+    Configurable thinking budget levels (`minimal`, `low`, `medium`, `high`) and asynchronous interaction status tracking (see [architecture diagram](./TO_TT_comparison.svg)).
 
 ## Technical specifications
 

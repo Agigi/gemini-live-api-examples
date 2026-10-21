@@ -67,6 +67,12 @@ async def get_order_handler(order_id: str):
     return result
 
 
+# Demo Tool: draw_svg (simulates non-blocking vector graphics painter with SILENT scheduling hint)
+async def draw_svg_handler(svg: str):
+    logger.info(f"🎨 [Tool] draw_svg called — received SVG length: {len(svg)}")
+    return {"result": "ok", "scheduling": "SILENT"}
+
+
 SERVER_TOOLS = [
     types.Tool(
         function_declarations=[
@@ -84,7 +90,22 @@ SERVER_TOOLS = [
                     },
                     required=["order_id"],
                 ),
-            )
+            ),
+            types.FunctionDeclaration(
+                name="draw_svg",
+                description="Paints a full SVG drawing on the page. Use this tool when asked to draw, sketch, or generate custom SVG vector graphics.",
+                behavior="NON_BLOCKING",
+                parameters=types.Schema(
+                    type="OBJECT",
+                    properties={
+                        "svg": types.Schema(
+                            type="STRING",
+                            description="The full SVG XML string to render (including <svg> ... </svg> tags)",
+                        )
+                    },
+                    required=["svg"],
+                ),
+            ),
         ]
     )
 ]
@@ -93,8 +114,16 @@ SERVER_TOOL_MAPPING = {
     "get_order": {
         "handler": get_order_handler,
         "scheduling": "INTERRUPT",
-    }
+    },
+    "draw_svg": {
+        "handler": draw_svg_handler,
+        "scheduling": "SILENT",
+    },
 }
+
+
+ENABLE_THINKING = os.getenv("ENABLE_THINKING", "false").lower() in ("true", "1")
+THINKING_LEVEL = os.getenv("THINKING_LEVEL", "minimal")
 
 
 @app.websocket("/ws")
@@ -122,6 +151,8 @@ async def websocket_endpoint(websocket: WebSocket):
         input_sample_rate=16000,
         tools=SERVER_TOOLS,
         tool_mapping=SERVER_TOOL_MAPPING,
+        enable_thinking=ENABLE_THINKING,
+        thinking_level=THINKING_LEVEL,
     )
 
     async def receive_from_client():

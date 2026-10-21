@@ -27,7 +27,11 @@ function initDOM() {
     "enableAlertTool",
     "enableCssStyleTool",
     "enableGetOrderTool",
+    "enableDrawSvgTool",
     "voiceSelect",
+    "enableThinking",
+    "thinkingLevelGroup",
+    "thinkingLevelSelect",
     "temperature",
     "temperatureValue",
     "disableActivityDetection",
@@ -151,6 +155,10 @@ async function connect() {
     state.client.googleGrounding = elements.enableGrounding.checked;
     state.client.responseModalities = ["AUDIO"];
     state.client.voiceName = elements.voiceSelect.value;
+    state.client.enableThinking = elements.enableThinking ? elements.enableThinking.checked : false;
+    state.client.thinkingLevel = state.client.enableThinking
+      ? (elements.thinkingLevelSelect?.value || "minimal")
+      : null;
     state.client.temperature = parseFloat(elements.temperature.value);
 
     // Set automatic activity detection configuration
@@ -188,6 +196,13 @@ async function connect() {
         const getOrderTool = new GetOrderTool();
         state.client.addFunction(getOrderTool);
         console.log("✅ Get order tool enabled");
+      }
+
+      // Add draw SVG tool if enabled
+      if (elements.enableDrawSvgTool && elements.enableDrawSvgTool.checked) {
+        const drawSvgTool = new DrawSVGTool();
+        state.client.addFunction(drawSvgTool);
+        console.log("✅ Draw SVG tool enabled");
       }
     } else {
       console.log(
@@ -577,6 +592,14 @@ function initEventListeners() {
   elements.injectBtn.addEventListener("click", injectClientContent);
   elements.volume.addEventListener("input", updateVolume);
   elements.temperature.addEventListener("input", updateTemperature);
+
+  if (elements.enableThinking && elements.thinkingLevelGroup) {
+    elements.enableThinking.addEventListener("change", () => {
+      elements.thinkingLevelGroup.style.display = elements.enableThinking.checked
+        ? "block"
+        : "none";
+    });
+  }
 
   elements.chatInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendMessage();

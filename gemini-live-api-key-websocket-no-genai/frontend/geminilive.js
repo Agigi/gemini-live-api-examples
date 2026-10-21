@@ -166,6 +166,8 @@ class GeminiLiveAPI {
     this.systemInstructions = "";
     this.googleGrounding = false;
     this.voiceName = "Puck"; // Default voice
+    this.enableThinking = false; // By default thinking is off
+    this.thinkingLevel = null;
     this.temperature = 1.0; // Default temperature
     this.inputAudioTranscription = false;
     this.outputAudioTranscription = false;
@@ -359,6 +361,12 @@ class GeminiLiveAPI {
               },
             },
           },
+          // thinkingConfig is omitted by default; included only if enableThinking is toggled on
+          ...(this.enableThinking && this.thinkingLevel && {
+            thinkingConfig: {
+              thinkingLevel: this.thinkingLevel,
+            },
+          }),
         },
         systemInstruction: { parts: [{ text: this.systemInstructions }] },
         tools: [{ functionDeclarations: tools }],

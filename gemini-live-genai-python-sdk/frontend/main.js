@@ -108,6 +108,33 @@ function handleJsonMessage(msg) {
       "tool",
       `🔧 ${msg.name}(${formattedArgs})${schedulingBadge}\n↳ ${formattedResult}`
     );
+
+    if (msg.name === "draw_svg" && msg.args && msg.args.svg) {
+      const svgContainer = document.getElementById("svgContainer");
+      const svgSection = document.getElementById("svgSection");
+      if (svgContainer && svgSection) {
+        svgContainer.innerHTML = msg.args.svg;
+        svgSection.style.display = "block";
+      }
+
+      // Also append rendered SVG bubble in chatLog
+      const svgBubble = document.createElement("div");
+      svgBubble.className = "message gemini svg-render-bubble";
+      svgBubble.style.padding = "16px";
+      svgBubble.style.borderRadius = "12px";
+      svgBubble.style.background = "#ffffff";
+      svgBubble.style.border = "1px solid #cbd5e1";
+      svgBubble.style.borderLeft = "4px solid #1a73e8";
+      svgBubble.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.05)";
+      svgBubble.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; color:#1a73e8; margin-bottom:8px;">✦ RENDERED SVG GRAPHIC</div>
+        <div style="display:flex; justify-content:center; align-items:center; overflow:auto; padding:8px;">
+          ${msg.args.svg}
+        </div>
+      `;
+      chatLog.appendChild(svgBubble);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
   }
 }
 

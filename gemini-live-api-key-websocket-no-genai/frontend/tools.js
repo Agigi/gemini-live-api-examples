@@ -190,3 +190,81 @@ class GetOrderTool extends FunctionCallDefinition {
     return mockOrder;
   }
 }
+
+/**
+ * Draw SVG Tool
+ * Paints a full SVG drawing on the page.
+ * Non-blocking: model can keep speaking. Silent: does not interrupt.
+ */
+class DrawSVGTool extends FunctionCallDefinition {
+  constructor() {
+    super(
+      "draw_svg",
+      "Paints a full SVG drawing on the page. Use this tool when asked to draw, sketch, or generate custom SVG vector graphics.",
+      {
+        type: "object",
+        properties: {
+          svg: {
+            type: "string",
+            description: "The full SVG XML string to render (including <svg> ... </svg> tags)"
+          }
+        }
+      },
+      ["svg"],
+      "NON_BLOCKING"
+    );
+    this.scheduling = "SILENT";
+  }
+
+  functionToCall(parameters) {
+    const svgString = parameters.svg;
+    if (!svgString) {
+      console.warn("draw_svg tool: No SVG string provided");
+      return "failed: No SVG string provided";
+    }
+
+    const container = document.getElementById("svgContainer");
+    const section = document.getElementById("svgSection");
+    const chatContainer = document.getElementById("chatContainer");
+
+    // 1. Render inline message bubble in the chat flow if present
+    if (chatContainer) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "assistant svg-chat-bubble";
+      msgDiv.style.background = "#ffffff";
+      msgDiv.style.border = "1px solid #cbd5e1";
+      msgDiv.style.borderLeft = "4px solid #2563eb";
+      msgDiv.style.padding = "16px";
+      msgDiv.style.borderRadius = "12px";
+      msgDiv.style.margin = "12px 0";
+      msgDiv.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.05)";
+
+      msgDiv.innerHTML = `
+        <div style="font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#2563eb; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+          <span>✦ RENDERED SVG GRAPHIC</span>
+        </div>
+        <div class="svg-inline-render" style="display:flex; justify-content:center; align-items:center; width:100%; overflow:auto; background:#ffffff; padding:10px; border-radius:8px; border:1px solid #f1f5f9;">
+          ${svgString}
+        </div>
+      `;
+
+      chatContainer.appendChild(msgDiv);
+    }
+
+    // 2. Also populate standalone container if present
+    if (container && section) {
+      container.innerHTML = svgString;
+      section.style.display = "block";
+    }
+
+    // 3. Smooth autoscroll to reveal the SVG
+    setTimeout(() => {
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }, 50);
+
+    console.log("🎨 SVG rendered successfully");
+    return "ok";
+  }
+}

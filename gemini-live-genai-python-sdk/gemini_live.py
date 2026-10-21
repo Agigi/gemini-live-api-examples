@@ -28,6 +28,8 @@ class GeminiLive:
         self.client = genai.Client(api_key=api_key)
         self.tools = tools or []
         self.tool_mapping = tool_mapping or {}
+        self.enable_thinking = enable_thinking
+        self.thinking_level = thinking_level
 
     async def start_session(
         self,
@@ -38,23 +40,28 @@ class GeminiLive:
         audio_interrupt_callback=None,
         client_content_queue=None,
     ):
-        config = types.LiveConnectConfig(
-            response_modalities=[types.Modality.AUDIO],
-            speech_config=types.SpeechConfig(
+        config_kwargs = {
+            "response_modalities": [types.Modality.AUDIO],
+            "speech_config": types.SpeechConfig(
                 voice_config=types.VoiceConfig(
                     prebuilt_voice_config=types.PrebuiltVoiceConfig(
                         voice_name="Puck"
                     )
                 )
             ),
-            system_instruction=types.Content(parts=[types.Part(text="You are a helpful AI assistant. Keep your responses concise. Speak in a friendly Irish accent. You can see the user's camera or screen which is shared as realtime input images with you.")]),
-            input_audio_transcription=types.AudioTranscriptionConfig(),
-            output_audio_transcription=types.AudioTranscriptionConfig(),
-            realtime_input_config=types.RealtimeInputConfig(
+            "system_instruction": types.Content(parts=[types.Part(text="You are a helpful AI assistant. Keep your responses concise. Speak in a friendly Irish accent. You can see the user's camera or screen which is shared as realtime input images with you.")]),
+            "input_audio_transcription": types.AudioTranscriptionConfig(),
+            "output_audio_transcription": types.AudioTranscriptionConfig(),
+            "realtime_input_config": types.RealtimeInputConfig(
                 turn_coverage="TURN_INCLUDES_ONLY_ACTIVITY",
             ),
-            tools=self.tools,
-        )
+            "tools": self.tools,
+        }
+
+        if self.enable_thinking and self.thinking_level:
+            config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_level=self.thinking_level)
+
+        config = types.LiveConnectConfig(**config_kwargs)
         
         logger.info(f"Connecting to Gemini Live with model={self.model}")
         try:
