@@ -38,21 +38,45 @@ function parseResponseMessages(data) {
       return responses;
     }
 
-    // Tool call (exclusive)
-    if (data?.toolCall) {
-      console.log("🎯 🛠️ TOOL CALL response", data?.toolCall);
-      responses.push({ type: MultimodalLiveResponseType.TOOL_CALL, data: data.toolCall, endOfTurn: false });
-      return responses;
+    // Server-level error handling
+    if (data?.error) {
+      console.error("🚨 Gemini Live API Error:", data.error);
+      responses.push({ type: MultimodalLiveResponseType.ERROR, data: data.error, endOfTurn: false });
     }
 
-    // Audio data from model turn parts
+    // Tool call (standard live models: top-level or serverContent)
+    const toolCall =
+      data?.toolCall ||
+      data?.tool_call ||
+      serverContent?.toolCall ||
+      serverContent?.tool_call;
+
+    if (toolCall) {
+      console.log("🎯 🛠️ TOOL CALL response", toolCall);
+      responses.push({ type: MultimodalLiveResponseType.TOOL_CALL, data: toolCall, endOfTurn: false });
+    }
+
+    // Audio, text, thoughts, and function calls from model turn parts
     if (parts?.length) {
       for (const part of parts) {
         if (part.inlineData) {
           responses.push({ type: MultimodalLiveResponseType.AUDIO, data: part.inlineData.data, endOfTurn: false });
         } else if (part.text) {
-          console.log("💬 TEXT response", part.text);
-          responses.push({ type: MultimodalLiveResponseType.TEXT, data: part.text, endOfTurn: false });
+          if (part.thought) {
+            console.log("🧠 THOUGHT:", part.text);
+          } else {
+            console.log("💬 TEXT response", part.text);
+            responses.push({ type: MultimodalLiveResponseType.TEXT, data: part.text, endOfTurn: false });
+          }
+        } else if (part.functionCall || part.function_call) {
+          // Extended Thinking models emit function calls inside modelTurn.parts
+          const fc = part.functionCall || part.function_call;
+          console.log("🎯 🛠️ FUNCTION CALL in modelTurn.part:", fc);
+          responses.push({
+            type: MultimodalLiveResponseType.TOOL_CALL,
+            data: { functionCalls: [fc] },
+            endOfTurn: false,
+          });
         }
       }
     }
@@ -112,6 +136,28 @@ function parseResponseMessages(data) {
   }
 
   return responses;
+}
+
+/**
+ * DEBUG: set to false to silence raw server message logging.
+ * Logs every server message (base64 audio payloads are replaced by their length)
+ * so you can inspect where function calls arrive (toolCall vs modelTurn.parts).
+ */
+const DEBUG_RAW_MESSAGES = false;
+
+function debugLogRawMessage(data) {
+  if (!DEBUG_RAW_MESSAGES) return;
+  try {
+    const sanitized = JSON.stringify(data, (key, value) =>
+      key === "data" && typeof value === "string" && value.length > 200
+        ? "<base64 " + value.length + " chars>"
+        : value
+    );
+    const isToolRelated = /functionCall|function_call|toolCall|tool_call/.test(sanitized);
+    console.log(isToolRelated ? "📨 RAW (tool-related):" : "📨 RAW:", sanitized);
+  } catch (e) {
+    console.log("📨 RAW (unserializable):", data);
+  }
 }
 
 /**
@@ -296,6 +342,7 @@ class GeminiLiveAPI {
 
     try {
       const messageData = JSON.parse(jsonData);
+      debugLogRawMessage(messageData);
       // Parse all response types from this message (audio + transcription can coexist)
       const responses = parseResponseMessages(messageData);
       for (const response of responses) {
@@ -364,7 +411,7 @@ class GeminiLiveAPI {
           // thinkingConfig is omitted by default; included only if enableThinking is toggled on
           ...(this.enableThinking && this.thinkingLevel && {
             thinkingConfig: {
-              thinkingLevel: this.thinkingLevel,
+              thinkingLevel: this.thinkingLevel.toUpperCase(),
             },
           }),
         },

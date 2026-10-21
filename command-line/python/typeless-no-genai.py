@@ -89,7 +89,21 @@ async def receive_from_gemini(ws, show_raw_asr: bool = True):
     async for raw_msg in ws:
         msg = json.loads(raw_msg)
         server_content = msg.get("serverContent", {})
-        tool_call = msg.get("toolCall")
+        
+        # Dual-path collection: top-level toolCall and modelTurn.parts
+        incoming_calls = []
+        raw_tool_call = msg.get("toolCall") or msg.get("tool_call") or server_content.get("toolCall") or server_content.get("tool_call")
+        if raw_tool_call:
+            calls = raw_tool_call.get("functionCalls") or raw_tool_call.get("function_calls") or []
+            incoming_calls.extend(calls)
+
+        model_turn = server_content.get("modelTurn", {})
+        parts = model_turn.get("parts", [])
+        for part in parts:
+            fc = part.get("functionCall") or part.get("function_call")
+            if fc:
+                if not any(c.get("id") == fc.get("id") for c in incoming_calls if c.get("id")):
+                    incoming_calls.append(fc)
 
         if server_content:
             # 1. Real-time ASR (Instant Speech-to-Text as you speak)
@@ -108,9 +122,8 @@ async def receive_from_gemini(ws, show_raw_asr: bool = True):
             if output_transcription and "text" in output_transcription:
                 text_chunk = output_transcription["text"]
             else:
-                model_turn = server_content.get("modelTurn", {})
-                for part in model_turn.get("parts", []):
-                    if "text" in part:
+                for part in parts:
+                    if "text" in part and not part.get("thought", False):
                         text_chunk = part["text"]
                         break
 
@@ -147,9 +160,9 @@ async def receive_from_gemini(ws, show_raw_asr: bool = True):
                     print("\n\033[92m✅ [Ready REQUIRES_ACTION]\033[0m", flush=True)
 
         # 3. Function Call Mechanism (If Gemini invokes submit_transcript tool)
-        if tool_call:
+        if incoming_calls:
             function_responses = []
-            for fc in tool_call.get("functionCalls", []):
+            for fc in incoming_calls:
                 if fc.get("name") == "submit_transcript":
                     call_id = fc.get("id", "")
                     args = fc.get("args", {})

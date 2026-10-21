@@ -20,8 +20,10 @@ class ShowAlertTool extends FunctionCallDefinition {
           }
         }
       },
-      ["message"]
+      ["message"],
+      "NON_BLOCKING"
     );
+    this.scheduling = "SILENT";
   }
 
   functionToCall(parameters) {

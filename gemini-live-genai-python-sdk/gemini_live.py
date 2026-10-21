@@ -11,7 +11,7 @@ class GeminiLive:
     """
     Handles the interaction with the Gemini Live API.
     """
-    def __init__(self, api_key, model, input_sample_rate, tools=None, tool_mapping=None):
+    def __init__(self, api_key, model, input_sample_rate, tools=None, tool_mapping=None, enable_thinking=False, thinking_level=None):
         """
         Initializes the GeminiLive client.
 
@@ -21,6 +21,8 @@ class GeminiLive:
             input_sample_rate (int): The sample rate for audio input.
             tools (list, optional): List of tools to enable. Defaults to None.
             tool_mapping (dict, optional): Mapping of tool names to functions. Defaults to None.
+            enable_thinking (bool, optional): Whether to send a thinking_config. Defaults to False.
+            thinking_level (str, optional): Thinking level (minimal, low, medium, high). Defaults to None.
         """
         self.api_key = api_key
         self.model = model
@@ -136,7 +138,22 @@ class GeminiLive:
                             
                             server_content = response.server_content
                             tool_call = response.tool_call
-                            
+                            incoming_calls = []
+
+                            # DEBUG: log raw tool-related payloads (audio bytes are excluded)
+                            _has_part_fc = bool(
+                                server_content and server_content.model_turn and any(
+                                    getattr(p, "function_call", None) for p in (server_content.model_turn.parts or [])
+                                )
+                            )
+                            if tool_call or _has_part_fc:
+                                logger.debug(
+                                    "RAW tool-related response: "
+                                    + response.model_dump_json(exclude_none=True, exclude={"server_content": {"model_turn": {"parts": {"__all__": {"inline_data"}}}}})
+                                )
+                            if tool_call and tool_call.function_calls:
+                                incoming_calls.extend(tool_call.function_calls)
+
                             if server_content:
                                 if server_content.model_turn:
                                     for part in server_content.model_turn.parts:
@@ -145,6 +162,11 @@ class GeminiLive:
                                                 await audio_output_callback(part.inline_data.data)
                                             else:
                                                 audio_output_callback(part.inline_data.data)
+                                        elif getattr(part, "function_call", None):
+                                            fc = part.function_call
+                                            if not any(getattr(c, "id", None) == fc.id for c in incoming_calls if getattr(c, "id", None)):
+                                                logger.info(f"Discovered function_call in model_turn.parts: {fc.name}")
+                                                incoming_calls.append(fc)
                                 
                                 if server_content.input_transcription and server_content.input_transcription.text:
                                     await event_queue.put({"type": "user", "text": server_content.input_transcription.text})
@@ -169,7 +191,7 @@ class GeminiLive:
                                             audio_interrupt_callback()
                                     await event_queue.put({"type": "interrupted"})
 
-                            if tool_call:
+                            if incoming_calls:
                                 async def execute_single_tool(fc):
                                     func_name = fc.name
                                     args = fc.args or {}
@@ -219,7 +241,7 @@ class GeminiLive:
 
                                 # Concurrently execute all tool calls
                                 function_responses = await asyncio.gather(
-                                    *(execute_single_tool(fc) for fc in tool_call.function_calls)
+                                    *(execute_single_tool(fc) for fc in incoming_calls)
                                 )
                                 await session.send_tool_response(function_responses=list(function_responses))
                         

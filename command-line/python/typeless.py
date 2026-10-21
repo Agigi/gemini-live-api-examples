@@ -85,6 +85,10 @@ async def receive_responses(session, show_raw_asr: bool = True):
             server_content = response.server_content
             tool_call = response.tool_call
 
+            incoming_calls = []
+            if tool_call and tool_call.function_calls:
+                incoming_calls.extend(tool_call.function_calls)
+
             if server_content:
                 # 1. Real-time ASR (Instant Speech-to-Text as you speak)
                 if show_raw_asr and server_content.input_transcription and server_content.input_transcription.text:
@@ -102,9 +106,13 @@ async def receive_responses(session, show_raw_asr: bool = True):
                     text_chunk = server_content.output_transcription.text
                 elif server_content.model_turn:
                     for part in server_content.model_turn.parts:
-                        if part.text:
-                            text_chunk = part.text
-                            break
+                        if getattr(part, "function_call", None):
+                            fc = part.function_call
+                            if not any(getattr(c, "id", None) == fc.id for c in incoming_calls if getattr(c, "id", None)):
+                                incoming_calls.append(fc)
+                        elif part.text and not getattr(part, "thought", False):
+                            if text_chunk is None:
+                                text_chunk = part.text
 
                 if text_chunk:
                     if current_state != 'output':
@@ -133,9 +141,9 @@ async def receive_responses(session, show_raw_asr: bool = True):
                         print("\n\033[92m✅ [Ready REQUIRES_ACTION]\033[0m", flush=True)
 
             # 3. Function Call Mechanism (If Gemini invokes submit_transcript tool)
-            if tool_call:
+            if incoming_calls:
                 function_responses = []
-                for fc in tool_call.function_calls:
+                for fc in incoming_calls:
                     if fc.name == "submit_transcript":
                         cleaned_text = fc.args.get("text", "")
                         print(f"\n\033[93m[Function Call Transcript]: {cleaned_text}\033[0m\n")

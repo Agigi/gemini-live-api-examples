@@ -319,7 +319,12 @@ function handleMessage(message) {
 
     case MultimodalLiveResponseType.TOOL_CALL:
       console.log("🛠️ Tool call received: ", message.data);
-      const functionCalls = message.data.functionCalls;
+      const rawCalls = message.data?.functionCalls || message.data?.function_calls;
+      const functionCalls = Array.isArray(rawCalls)
+        ? rawCalls
+        : rawCalls
+        ? [rawCalls]
+        : [];
 
       // Fan out all function calls concurrently (non-blocking — async tools
       // like get_order run in parallel and don't stall each other or the UI)
@@ -367,6 +372,13 @@ function handleMessage(message) {
         // Send all responses back once every call has settled
         state.client.sendToolResponse(functionResponses);
       });
+      break;
+
+    case MultimodalLiveResponseType.ERROR:
+      console.error("API error received:", message.data);
+      const errMsg = message.data?.message || (typeof message.data === "string" ? message.data : JSON.stringify(message.data));
+      addMessage(`[API Error]: ${errMsg}`, "system");
+      updateStatus("debugInfo", `Error: ${errMsg}`);
       break;
 
     case MultimodalLiveResponseType.INTERACTION_STATUS:

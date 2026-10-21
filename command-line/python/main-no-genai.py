@@ -103,11 +103,28 @@ async def receive_from_gemini(ws):
             if t.rstrip()[-1:] in ".!?":
                 print()
 
-        # 4. Handle tool calls (non-blocking concurrent execution)
-        tool_call = msg.get("toolCall")
-        if tool_call:
-            function_calls = tool_call.get("functionCalls", [])
-            asyncio.create_task(handle_tool_calls(ws, function_calls))
+        # 4. Handle tool calls (dual-path: top-level toolCall or modelTurn.parts)
+        incoming_calls = []
+        raw_tool_call = (
+            msg.get("toolCall")
+            or msg.get("tool_call")
+            or server_content.get("toolCall")
+            or server_content.get("tool_call")
+        )
+        if raw_tool_call:
+            calls = raw_tool_call.get("functionCalls") or raw_tool_call.get("function_calls") or []
+            incoming_calls.extend(calls)
+
+        model_turn = server_content.get("modelTurn", {})
+        parts = model_turn.get("parts", [])
+        for part in parts:
+            fc = part.get("functionCall") or part.get("function_call")
+            if fc:
+                if not any(c.get("id") == fc.get("id") for c in incoming_calls if c.get("id")):
+                    incoming_calls.append(fc)
+
+        if incoming_calls:
+            asyncio.create_task(handle_tool_calls(ws, incoming_calls))
 
         # 5. Handle interaction status (Background reasoning tracking)
         interaction_status = (
